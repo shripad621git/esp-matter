@@ -33,6 +33,7 @@ set(MATTER_SDK_PATH ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip)
 # This should be done before using the IDF_TARGET variable.
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 include($ENV{ESP_MATTER_DEVICE_PATH}/esp_matter_device.cmake)
+include($ENV{ESP_MATTER_PATH}/examples/generic_switch/project_include.cmake)
 
 set(EXTRA_COMPONENT_DIRS
     "${ESP_MATTER_PATH}/examples/common"
@@ -45,6 +46,8 @@ project(generic_switch)
 if(CONFIG_IDF_TARGET_ESP32C2)
     include(relinker)
 endif()
+
+factory_partition_create_image(nvs $ENV{ESP_MATTER_PATH} FLASH_IN_PROJECT)
 
 idf_build_set_property(CXX_COMPILE_OPTIONS "-std=gnu++14;-Os;-DCHIP_HAVE_CONFIG_H" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Os" APPEND)
