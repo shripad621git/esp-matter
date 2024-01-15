@@ -1,37 +1,36 @@
-def setup_directories_firmware() {
+def setup_directories() {
     sh '''
     echo "repos path: ${REPOS_PATH}"
     ls -l ${REPOS_PATH} 
-    cd ${REPOS_PATH}
-    cd ..
-    ls -l
-    mkdir -p ${PACKAGE_PATH}
-    mkdir -p ${PACKAGE_PATH}/Firmware
+
     mkdir -p ${PACKAGE_PATH}/Firmware/Evaluation
-    '''
-}
-
-def setup_directories_script() {
-    sh '''
-    cd ${REPOS_PATH}
-    mkdir -p ${PACKAGE_PATH}
     mkdir -p ${PACKAGE_PATH}/Script
-    '''
-}
-
-def setup_directories_tools() {
-    sh '''
-    cd ${REPOS_PATH}
-    mkdir -p ${PACKAGE_PATH}
     mkdir -p ${PACKAGE_PATH}/Tools
     '''
 }
 
 def setup_environment() {
     sh '''
+
     cd ${REPOS_PATH}/esp-idf
     . ./export.sh
-    cd ..
+    cd -
+
+    cd ${ESP_MATTER_PATH}
+    git status
+    git fetch origin main --depth 1
+    git checkout FETCH_HEAD
+    git status
+    git clean -fd
+    git status
+    git submodule update --init --depth 1
+
+    cd ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip
+    ./scripts/checkout_submodules.py --platform esp32 linux --shallow
+
+    cd ${ESP_MATTER_PATH}
+    ./install.sh
+    . ./export.sh
 
     cd ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip
     scripts/examples/gn_build_example.sh examples/ota-provider-app/linux out/debug chip_config_network_layer_ble=false
@@ -62,79 +61,18 @@ def firmware_build() {
     echo "product :${product} "
     cd ${ESP_MATTER_PATH}/examples/${product}
     SDKCONFIG_FILE=${ESP_MATTER_PATH}/examples/${product}/sdkconfig.defaults
-   
-    . ${IDF_PATH}/export.sh
-    . ${ESP_MATTER_PATH}/export.sh;
+ 
+    rm -rf build sdkconfig sdkconfig.old managed_components dependencies.lock
 
-    idf.py fullclean
+    echo "CONFIG_ENABLE_ESP32_FACTORY_DATA_PROVIDER=y" >> sdkconfig.defaults
+    echo "CONFIG_ENABLE_ESP32_DEVICE_INSTANCE_INFO_PROVIDER=y" >> sdkconfig.defaults
+    echo "CONFIG_SEC_CERT_DAC_PROVIDER=y" >> sdkconfig.defaults
+    echo "CONFIG_ESP_SECURE_CERT_DS_PERIPHERAL=n" >> sdkconfig.defaults
+    echo "CONFIG_ENABLE_OTA_REQUESTOR=y" >> sdkconfig.defaults
+    echo "CONFIG_ESP_COREDUMP_ENABLE_TO_UART=y" >> sdkconfig.defaults
+    echo "CONFIG_FACTORY_DEVICE_INSTANCE_INFO_PROVIDER=y" >> sdkconfig.defaults
 
-    config_option1="CONFIG_ENABLE_ESP32_FACTORY_DATA_PROVIDER=y"
-    config_option2="CONFIG_ENABLE_ESP32_DEVICE_INSTANCE_INFO_PROVIDER=y"
-    config_option3="CONFIG_SEC_CERT_DAC_PROVIDER=y"
-    config_option4="CONFIG_ESP_SECURE_CERT_DS_PERIPHERAL=n"
-    config_option5="CONFIG_ENABLE_OTA_REQUESTOR=y"
-    config_option6="CONFIG_ESP_COREDUMP_ENABLE_TO_UART=y"
-    config_option7="CONFIG_FACTORY_DEVICE_INSTANCE_INFO_PROVIDER=y"
-
-    if [ -e "sdkconfig.defaults.${chip}" ]; then
-        if ! grep -q "^${config_option1%%=*}=" "sdkconfig.defaults.${chip}"; then
-            echo "${config_option1}" >> "sdkconfig.defaults.${chip}"
-        fi
-
-        if ! grep -q "^${config_option2%%=*}=" "sdkconfig.defaults.${chip}"; then
-            echo "${config_option2}" >> "sdkconfig.defaults.${chip}"
-        fi
-
-        if ! grep -q "^${config_option3%%=*}=" "sdkconfig.defaults.${chip}"; then
-            echo "${config_option3}" >> "sdkconfig.defaults.${chip}"
-        fi
-
-        if [ "${chip}" != "esp32h2" ] && ! grep -q "^${config_option4%%=*}=" "sdkconfig.defaults.${chip}"; then
-            echo "${config_option4}" >> "sdkconfig.defaults.${chip}"
-        fi
-
-        if ! grep -q "${config_option5}" "sdkconfig.defaults.${chip}"; then
-                echo "${config_option5}" >> "sdkconfig.defaults.${chip}"
-        fi
-
-        echo "${config_option6}" >> "sdkconfig.defaults.${chip}"
-
-        if ! grep -q "${config_option7}" "sdkconfig.defaults.${chip}"; then
-                echo "${config_option7}" >> "sdkconfig.defaults.${chip}"
-        fi
-
-    else
-        if ! grep -q "^${config_option1%%=*}=" sdkconfig.defaults; then
-            echo "${config_option1}" >> "sdkconfig.defaults"
-        fi
-
-        if ! grep -q "^${config_option2%%=*}=" sdkconfig.defaults; then
-            echo "${config_option2}" >> "sdkconfig.defaults"
-        fi
-
-        if ! grep -q "^${config_option3%%=*}=" sdkconfig.defaults; then
-            echo "${config_option3}" >> "sdkconfig.defaults"
-        fi
-
-        if ! grep -q "^${config_option4%%=*}=" sdkconfig.defaults; then
-            echo "${config_option4}" >> "sdkconfig.defaults"
-        fi
-
-        if ! grep -q "${config_option5}" "sdkconfig.defaults"; then
-            echo "${config_option5}" >> "sdkconfig.defaults"
-        fi
-
-        echo "${config_option6}" >> "sdkconfig.defaults"
-
-        if ! grep -q "${config_option7}" "sdkconfig.defaults"; then
-            echo "${config_option7}" >> "sdkconfig.defaults"
-        fi
-    fi
-
-    idf.py set-target ${chip}
-
-    cat sdkconfig
-    idf.py build
+    idf.py set-target ${chip} build
     '''
 }
 
