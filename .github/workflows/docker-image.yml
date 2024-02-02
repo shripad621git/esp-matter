@@ -19,7 +19,7 @@ on:
     # Runs when esp-matter-builds file changes
     branches: [ "main" ]
     paths:
-      - "tools/docker/Dockerfile"
+      - "tools/docker/jenkins-builds"
 
   # Can be run manually
   workflow_dispatch:
@@ -27,7 +27,7 @@ on:
 # TODO: uncomment the remove the current one when raising MR
 env:
   # Platforms to build the image for
-  BUILD_PLATFORMS: linux/amd64,linux/arm64
+  BUILD_PLATFORMS: linux/amd64
   #  DOCKERHUB_REPO: ${{ github.repository_owner }}/${{ github.repository }}
   DOCKERHUB_REPO: shripad97/esp-matter-ci
   TAG_NAME: latest
@@ -58,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: tools/docker
-          file: tools/docker/Dockerfile
+          file: tools/docker/jenkins-builds
           push: true
           tags: ${{ env.DOCKERHUB_REPO }}:${{ env.TAG_NAME }}
           platforms: ${{ env.BUILD_PLATFORMS }}
