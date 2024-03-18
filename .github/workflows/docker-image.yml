@@ -29,13 +29,13 @@ env:
   # Platforms to build the image for
   # Github runner is running out of space when we are building for multiple architectures in single runner
   BUILD_PLATFORMS: linux/amd64
-  DOCKERHUB_REPO: ${{ github.repository }}
+  DOCKERHUB_REPO: shripad97/esp-matter
   REQUIRED_IDF_VERSION: v5.1.2
 
 jobs:
   build:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' }}
+    if: ${{ github.repository_owner == 'shripad621git' }}
 
     runs-on: ubuntu-latest
 

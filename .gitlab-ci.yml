@@ -133,7 +133,7 @@ variables:
 
 .build_examples_template:
   stage: build
-  image: gitlab.espressif.cn:5050/app-frameworks/esp-matter/build-env:latest
+  image: shripad97/esp-matter:latest
   tags:
     - build
     # runner: `sudo mkdir -p /cache/matter_build/`
