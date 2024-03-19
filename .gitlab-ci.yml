@@ -5,7 +5,9 @@ stages:
 
 variables:
     ESP_MATTER_PATH: "$CI_PROJECT_DIR"
-    IDF_PATH: "$CI_PROJECT_DIR/esp-idf"
+    IDF_PATH: "/opt/espressif/esp-idf/"
+    IDF_TOOLS_PATH: "/opt/espressif/tools"
+    CHIP_SUBMODULE_PATH: "/opt/espressif/connectedhomeip"
     BR_PATH: "$CI_PROJECT_DIR/esp-thread-br"
     IDF_GITHUB_ASSETS: "dl.espressif.com/github_assets"
     GIT_STRATEGY: fetch
@@ -46,27 +48,6 @@ variables:
       time rsync -a ~/.espressif/dist/ ${MATTER_CACHE_DIR}/espressif_dist/ || true
     fi
 
-.chip_submodule_update: &chip_submodule_update
-  - sed -i "s%https://github.com/espressif%${GITLAB_SSH_SERVER}/espressif%" .gitmodules
-  - git submodule sync --recursive
-  - git submodule update -f --init --recursive --depth 1
-
-.setup_idf: &setup_idf
-  # TODO: IDF_VERSION maybe a commit id, use `git fetch` rather than `git clone -b`
-  # - git clone -b ${IDF_VERSION} ${IDF_GIT_REPO_URL} --depth=1
-  - mkdir -p esp-idf
-  - cd esp-idf
-  - git init
-  - git remote add origin ${IDF_GIT_REPO_URL}
-  - git fetch origin ${IDF_VERSION}:refs/head --depth=1 -f
-  - git checkout ${IDF_VERSION}
-  - ./install.sh
-  - . ./export.sh
-  # fetch submodules
-  - export PYTHONPATH=${IDF_PATH}/tools/ci/python_packages/:${PYTHONPATH}
-  - pip install python-gitlab
-  - pip install --upgrade idf-component-manager
-  - python tools/ci/ci_fetch_submodule.py
 
 .setup_ot_br: &setup_ot_br
   - cd ${CI_PROJECT_DIR}
@@ -91,7 +72,6 @@ variables:
 .setup_matter: &setup_matter
   - cd ${CI_PROJECT_DIR}
   # Setting up Python environment still spend a pretty long time (15mins -> 5mins).
-  - ./install.sh
   - . ./export.sh
 
 .build_matter_examples: &build_matter_examples
@@ -142,11 +122,19 @@ variables:
   before_script:
     - *add_gitlab_ssh_key
     - *get_build_caches
-    - *chip_submodule_update
-    - *setup_idf
-    - *setup_matter
+    - export IDF_PATH="/opt/espressif/esp-idf"
+    - source ${IDF_PATH}/export.sh
+    - export PYTHONPATH=${IDF_PATH}/tools/ci/python_packages/:${PYTHONPATH}
+    - pip install python-gitlab
+    - pip install --upgrade idf-component-manager
+    - cd ${IDF_PATH}
+    - python tools/ci/ci_fetch_submodule.py
     - cd ${ESP_MATTER_PATH}
     - mkdir -p ${REPOS_PATH}
+    - cd ${ESP_MATTER_PATH}
+    - rm -rf connectedhomeip/connectedhomeip  # Remove submodule directory
+    - ln -s ${CHIP_SUBMODULE_PATH} connectedhomeip/connectedhomeip  # Create symlink to specified CHIP_SUBMODULE_PATH
+    - *setup_matter
     # update caches only when setup succeed
     - *update_build_caches
   variables:
@@ -163,8 +151,6 @@ variables:
   before_script:
     - *add_gitlab_ssh_key
     - *get_build_caches
-    - *chip_submodule_update
-    - *setup_idf
     - cd ${ESP_MATTER_PATH}
     - mkdir -p ${REPOS_PATH}
     - *update_build_caches
