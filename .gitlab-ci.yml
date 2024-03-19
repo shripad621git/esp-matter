@@ -73,6 +73,11 @@ variables:
   - cd ${CI_PROJECT_DIR}
   # Setting up Python environment still spend a pretty long time (15mins -> 5mins).
   - . ./export.sh
+  - python3 -m pip install -r requirements.txt
+  - cd connectedhomeip/connectedhomeip
+  - gn --root="${CHIP_SUBMODULE_PATH}" gen ${CHIP_SUBMODULE_PATH}/out/host --args='chip_inet_config_enable_ipv4=false'
+  - ninja -C out/host chip-tool
+   
 
 .build_matter_examples: &build_matter_examples
     - export MATTER_EXAMPLES_PATH=$ESP_MATTER_PATH/connectedhomeip/connectedhomeip/examples
