@@ -9,12 +9,82 @@ import subprocess
 import netifaces
 from typing import Tuple
 from pytest_embedded import Dut
+import threading
 
 CURRENT_DIR_LIGHT = str(pathlib.Path(__file__).parent)+'/light'
 CHIP_TOOL_EXE = str(pathlib.Path(__file__).parent)+ '/../connectedhomeip/connectedhomeip/out/host/chip-tool'
 OT_BR_EXAMPLE_PATH = str(pathlib.Path(__file__).parent)+'/../esp-thread-br/examples/basic_thread_border_router'
 pytest_build_dir = CURRENT_DIR_LIGHT
 pytest_matter_thread_dir = CURRENT_DIR_LIGHT+'|'+OT_BR_EXAMPLE_PATH
+
+
+@pytest.mark.esp32c2
+@pytest.mark.esp32c3
+@pytest.mark.esp32c6
+@pytest.mark.esp_matter_dut
+@pytest.mark.parametrize(
+    ' count, app_path, target, erase_all', [
+        ( 4, pytest_build_dir, 'esp32|esp32c2|esp32c3|esp32c6', 'y|y|y|y'),
+    ],
+    indirect=True,
+)
+def run_the_heap_dump_test(dut: Dut) -> None:
+    light = dut
+    light.expect(r'chip\[DL\]\: Configuring CHIPoBLE advertising', timeout=20)
+    time.sleep(5)
+
+    # List to store heap dump data
+    heap_dumps = []
+
+    # Lock for thread-safe list operations
+    heap_dumps_lock = threading.Lock()
+
+    # Function to monitor device logs
+    def monitor_logs():
+        while True:
+            try:
+                line = light.read_line(timeout=1)
+                if "========== HEAP-DUMP-START ==========" in line:
+                    heap_dump = []
+                    while True:
+                        heap_line = light.read_line(timeout=1)
+                        if "========== HEAP-DUMP-END ==========" in heap_line:
+                            break
+                        heap_dump.append(heap_line)
+                    with heap_dumps_lock:
+                        heap_dumps.append("".join(heap_dump))
+            except pexpect.TIMEOUT:
+                continue
+            except pexpect.EOF:
+                break
+
+    # Start log monitoring in a separate thread
+    log_thread = threading.Thread(target=monitor_logs, daemon=True)
+    log_thread.start()
+
+    # Run commissioning
+    command = CHIP_TOOL_EXE + ' pairing ble-wifi 1 ChipTEH2 chiptest123 20202021 3840'
+    out_str = subprocess.getoutput(command)
+    print(out_str)
+
+    result = re.findall(r'Run command failure', str(out_str))
+    if len(result) != 0:
+        assert False
+
+    # Wait for a short time to allow log processing
+    time.sleep(5)
+
+    # Ensure the log monitoring thread is terminated
+    log_thread.join(timeout=1)
+
+    # Process and analyze heap dumps
+    for i, dump in enumerate(heap_dumps):
+        print(f"Heap Dump {i + 1}:")
+        print(dump)
+        # Add your heap size analysis here
+
+    #dump the heap stats
+    print(heap_dumps)
 
 
 @pytest.mark.esp32c3
