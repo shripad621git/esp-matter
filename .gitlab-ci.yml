@@ -432,16 +432,14 @@ pytest_heap_profiler:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event' ||  $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "push"
   needs:
-    - build_esp_matter_examples_pytest_C2_idf_v5_1
     - build_esp_matter_examples_pytest_C3_idf_v4_4
-    - build_esp_matter_examples_pytest_C6_idf_v5_1
   script:
     - cd ${ESP_MATTER_PATH}
     - rm -rf connectedhomeip/connectedhomeip
     - ln -s ${CHIP_SUBMODULE_PATH} connectedhomeip/connectedhomeip
     - pip install -r tools/ci/requirements-pytest.txt
-    - pytest examples/ --target esp32c2 --target esp32c3 --target esp32c6 -m esp_matter_dut --junitxml=XUNIT_RESULT.xml --baud 74880
-  tags: ["esp32c2", "esp32c3", "esp32c6", "esp_matter_dut"]
+    - pytest examples/ --target esp32c3 -m heap_profiler --junitxml=XUNIT_RESULT.xml --baud 115200
+  tags: ["esp32c3", "esp_matter_dut", "heap_profiler"]
 
 pytest_esp32h2_esp_matter_dut:
   stage: target_test

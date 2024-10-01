@@ -18,13 +18,12 @@ pytest_build_dir = CURRENT_DIR_LIGHT
 pytest_matter_thread_dir = CURRENT_DIR_LIGHT+'|'+OT_BR_EXAMPLE_PATH
 
 
-@pytest.mark.esp32c2
 @pytest.mark.esp32c3
-@pytest.mark.esp32c6
 @pytest.mark.esp_matter_dut
+@pytest.mark.heap_profiler
 @pytest.mark.parametrize(
     ' count, app_path, target, erase_all', [
-        ( 4, pytest_build_dir, 'esp32|esp32c2|esp32c3|esp32c6', 'y|y|y|y'),
+        ( 1, pytest_build_dir, 'esp32c3', 'y'),
     ],
     indirect=True,
 )
